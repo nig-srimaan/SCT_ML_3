@@ -2,23 +2,34 @@ import os
 import zipfile
 import cv2
 import numpy as np
+from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 from sklearn.metrics import accuracy_score, classification_report
 
 if os.path.exists('dataset.zip'):
     with zipfile.ZipFile('dataset.zip', 'r') as zip_ref:
-        zip_ref.extractall('dataset')
+        zip_ref.extractall('extracted_data')
 
-def load_images(data_dir, image_size=(64, 64)):
+data_dir = 'extracted_data/PetImages'
+if not os.path.exists(data_dir):
+    for root, dirs, files in os.walk('extracted_data'):
+        if 'PetImages' in dirs:
+            data_dir = os.path.join(root, 'PetImages')
+            break
+if not os.path.exists(data_dir) and os.path.exists('PetImages'):
+    data_dir = 'PetImages'
+
+def load_images(base_dir, image_size=(64, 64)):
     images = []
     labels = []
-    categories = ['cats', 'dogs']
+    categories = ['Cat', 'Dog']
     
     for category in categories:
-        path = os.path.join(data_dir, category)
+        path = os.path.join(base_dir, category)
         if not os.path.exists(path):
             continue
         class_num = categories.index(category)
+        
         for img_name in os.listdir(path):
             try:
                 img_path = os.path.join(path, img_name)
@@ -32,14 +43,11 @@ def load_images(data_dir, image_size=(64, 64)):
                 
     return np.array(images), np.array(labels)
 
-train_dir = 'dataset/training_set' if os.path.exists('dataset/training_set') else 'training_set'
-test_dir = 'dataset/test_set' if os.path.exists('dataset/test_set') else 'test_set'
+X, y = load_images(data_dir)
 
-X_train, y_train = load_images(train_dir)
-X_test, y_test = load_images(test_dir)
+X = X / 255.0
 
-X_train = X_train / 255.0
-X_test = X_test / 255.0
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 model = SVC(kernel='rbf', C=1.0, gamma='scale')
 model.fit(X_train, y_train)
